@@ -177,6 +177,30 @@ model_cache/
 *.pkl
 *.joblib
 *.model
+*.pth
+
+# ============================================================================
+# FOREX TRADING SYSTEM SPECIFIC
+# ============================================================================
+# State files (should never be in git)
+*.json
+state/
+evolution_state.json
+trade_history.json
+intelligent_memory.json
+master_ai_performance.json
+*_results_*.json
+
+# Chart images (temporary)
+/tmp/charts/
+charts/
+*.png
+
+# Trading logs
+logs/forex_system.log
+logs/errors.log
+logs/trades.log
+logs/audit.log
 
 # ============================================================================
 # CLAUDE CODE SPECIFIC
