@@ -1,0 +1,67 @@
+# Core Python Dependencies
+python-dotenv==1.0.0
+
+# Async Framework
+asyncio-mqtt==0.16.1
+aiohttp==3.9.1
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+alembic==1.13.0
+psycopg2-binary==2.9.9
+
+# Redis
+redis==5.0.1
+aioredis==2.0.1
+
+# Trading & Analysis
+backtrader==1.9.78.123
+ta==0.11.0
+pandas==2.1.4
+numpy==1.26.2
+
+# MT5 Broker Integration
+MetaTrader5==5.0.45
+
+# OANDA Broker Integration
+oandapyV20==0.7.2
+
+# Technical Indicators
+ta-lib==0.4.28
+scikit-learn==1.3.2
+
+# Telegram Bot
+python-telegram-bot==20.7
+
+# Chart Generation
+mplfinance==0.12.10b0
+matplotlib==3.8.2
+Pillow==10.1.0
+
+# Logging
+python-json-logger==2.0.7
+
+# Web Framework (optional dashboard)
+fastapi==0.105.0
+uvicorn==0.25.0
+pydantic==2.5.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+freezegun==1.4.0
+faker==20.1.0
+
+# Code Quality
+black==23.12.1
+flake8==6.1.0
+mypy==1.7.1
+pylint==3.0.3
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+requests==2.31.0
