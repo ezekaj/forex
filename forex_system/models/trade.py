@@ -67,7 +67,7 @@ class Trade(Base):
 
     # Notes and metadata
     notes = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)  # Additional custom data
+    extra_metadata = Column(JSON, nullable=True)  # Additional custom data
 
     # Timestamps
     created_at = Column(DateTime, default=func.now(), nullable=False)

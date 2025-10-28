@@ -55,7 +55,7 @@ class Opportunity(Base):
 
     # Metadata
     chart_image_path = Column(String(255), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    extra_metadata = Column(JSON, nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=func.now(), nullable=False, index=True)

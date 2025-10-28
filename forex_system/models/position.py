@@ -42,7 +42,7 @@ class Position(Base):
     opened_at = Column(DateTime, default=func.now(), nullable=False)
     last_updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    metadata = Column(JSON, nullable=True)
+    extra_metadata = Column(JSON, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Position(id={self.id}, pair={self.pair}, pnl={self.unrealized_pnl})>"
