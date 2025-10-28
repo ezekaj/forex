@@ -93,11 +93,20 @@ class RandomForestStrategy(BaseStrategy):
         X_train, X_val = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_val = y.iloc[:split_idx], y.iloc[split_idx:]
 
+        # Detect binary vs ternary classification
+        unique_classes = sorted(y_train.unique())
+        is_binary = len(unique_classes) == 2
+        
         print(f"Training on {len(X_train)} samples, validating on {len(X_val)} samples...")
+        print(f"Classification mode: {'BINARY' if is_binary else 'TERNARY'}")
         print(f"Class distribution (train):")
-        print(f"  BUY: {(y_train == Signal.BUY.value).sum()} ({(y_train == Signal.BUY.value).sum() / len(y_train) * 100:.1f}%)")
-        print(f"  HOLD: {(y_train == Signal.HOLD.value).sum()} ({(y_train == Signal.HOLD.value).sum() / len(y_train) * 100:.1f}%)")
-        print(f"  SELL: {(y_train == Signal.SELL.value).sum()} ({(y_train == Signal.SELL.value).sum() / len(y_train) * 100:.1f}%)")
+        if is_binary:
+            print(f"  BUY: {(y_train == Signal.BUY.value).sum()} ({(y_train == Signal.BUY.value).sum() / len(y_train) * 100:.1f}%)")
+            print(f"  SELL: {(y_train == Signal.SELL.value).sum()} ({(y_train == Signal.SELL.value).sum() / len(y_train) * 100:.1f}%)")
+        else:
+            print(f"  BUY: {(y_train == Signal.BUY.value).sum()} ({(y_train == Signal.BUY.value).sum() / len(y_train) * 100:.1f}%)")
+            print(f"  HOLD: {(y_train == Signal.HOLD.value).sum()} ({(y_train == Signal.HOLD.value).sum() / len(y_train) * 100:.1f}%)")
+            print(f"  SELL: {(y_train == Signal.SELL.value).sum()} ({(y_train == Signal.SELL.value).sum() / len(y_train) * 100:.1f}%)")
 
         # Train model
         self.model.fit(X_train, y_train)
@@ -113,21 +122,36 @@ class RandomForestStrategy(BaseStrategy):
 
         # Detailed validation metrics
         print("\nValidation Set Performance:")
-        print(classification_report(
-            y_val,
-            y_val_pred,
-            target_names=['SELL', 'HOLD', 'BUY'],
-            zero_division=0
-        ))
-
-        # Confusion matrix
-        cm = confusion_matrix(y_val, y_val_pred, labels=[-1, 0, 1])
-        print("\nConfusion Matrix:")
-        print("                Predicted")
-        print("              SELL  HOLD  BUY")
-        print(f"Actual SELL   {cm[0, 0]:4d}  {cm[0, 1]:4d}  {cm[0, 2]:4d}")
-        print(f"       HOLD   {cm[1, 0]:4d}  {cm[1, 1]:4d}  {cm[1, 2]:4d}")
-        print(f"       BUY    {cm[2, 0]:4d}  {cm[2, 1]:4d}  {cm[2, 2]:4d}")
+        if is_binary:
+            print(classification_report(
+                y_val,
+                y_val_pred,
+                target_names=['SELL', 'BUY'],
+                labels=[-1, 1],
+                zero_division=0
+            ))
+            # Binary confusion matrix
+            cm = confusion_matrix(y_val, y_val_pred, labels=[-1, 1])
+            print("\nConfusion Matrix:")
+            print("                Predicted")
+            print("              SELL  BUY")
+            print(f"Actual SELL   {cm[0, 0]:4d}  {cm[0, 1]:4d}")
+            print(f"       BUY    {cm[1, 0]:4d}  {cm[1, 1]:4d}")
+        else:
+            print(classification_report(
+                y_val,
+                y_val_pred,
+                target_names=['SELL', 'HOLD', 'BUY'],
+                zero_division=0
+            ))
+            # Ternary confusion matrix
+            cm = confusion_matrix(y_val, y_val_pred, labels=[-1, 0, 1])
+            print("\nConfusion Matrix:")
+            print("                Predicted")
+            print("              SELL  HOLD  BUY")
+            print(f"Actual SELL   {cm[0, 0]:4d}  {cm[0, 1]:4d}  {cm[0, 2]:4d}")
+            print(f"       HOLD   {cm[1, 0]:4d}  {cm[1, 1]:4d}  {cm[1, 2]:4d}")
+            print(f"       BUY    {cm[2, 0]:4d}  {cm[2, 1]:4d}  {cm[2, 2]:4d}")
 
         # Store metrics
         self.train_metrics = {

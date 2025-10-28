@@ -84,7 +84,8 @@ class BaseStrategy(ABC):
         df: pd.DataFrame,
         lookahead_bars: int = 5,
         buy_threshold: float = 0.003,
-        sell_threshold: float = -0.003
+        sell_threshold: float = -0.003,
+        binary: bool = False
     ) -> pd.Series:
         """
         Generate BUY/HOLD/SELL labels from price data.
@@ -92,16 +93,17 @@ class BaseStrategy(ABC):
         Labels are based on future returns:
         - BUY: If future return > buy_threshold
         - SELL: If future return < sell_threshold
-        - HOLD: Otherwise
+        - HOLD: Otherwise (only if binary=False)
 
         Args:
             df: DataFrame with 'close' column
             lookahead_bars: Number of bars to look ahead
             buy_threshold: Threshold for BUY signal (e.g., 0.003 = 0.3%)
             sell_threshold: Threshold for SELL signal (e.g., -0.003 = -0.3%)
+            binary: If True, only generate BUY/SELL (skip HOLD, use NaN instead)
 
         Returns:
-            Series with labels (1=BUY, 0=HOLD, -1=SELL)
+            Series with labels (1=BUY, 0=HOLD, -1=SELL) or (1=BUY, -1=SELL, NaN)
         """
         if 'close' not in df.columns:
             raise ValueError("DataFrame must have 'close' column")
@@ -110,10 +112,17 @@ class BaseStrategy(ABC):
         future_close = df['close'].shift(-lookahead_bars)
         future_returns = (future_close - df['close']) / df['close']
 
-        # Generate labels
-        labels = pd.Series(Signal.HOLD.value, index=df.index)
-        labels[future_returns > buy_threshold] = Signal.BUY.value
-        labels[future_returns < sell_threshold] = Signal.SELL.value
+        if binary:
+            # Binary classification: Only BUY or SELL, no HOLD
+            # Everything that doesn't meet threshold becomes NaN and gets filtered out
+            labels = pd.Series(np.nan, index=df.index)
+            labels[future_returns > buy_threshold] = Signal.BUY.value
+            labels[future_returns < sell_threshold] = Signal.SELL.value
+        else:
+            # Ternary classification: BUY/HOLD/SELL
+            labels = pd.Series(Signal.HOLD.value, index=df.index)
+            labels[future_returns > buy_threshold] = Signal.BUY.value
+            labels[future_returns < sell_threshold] = Signal.SELL.value
 
         # Remove last N bars (no future data available)
         labels.iloc[-lookahead_bars:] = np.nan

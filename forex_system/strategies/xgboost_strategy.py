@@ -67,6 +67,7 @@ class XGBoostStrategy(BaseStrategy):
 
         self.feature_names = None
         self.train_metrics = {}
+        self.reverse_map = {0: -1, 1: 0, 2: 1}  # Default ternary mapping
 
     def train(
         self,
@@ -102,16 +103,35 @@ class XGBoostStrategy(BaseStrategy):
         X_train, X_val = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_val = y.iloc[:split_idx], y.iloc[split_idx:]
 
-        # Map labels to 0, 1, 2 for XGBoost (requires non-negative integers)
-        label_map = {-1: 0, 0: 1, 1: 2}  # SELL=0, HOLD=1, BUY=2
+        # Detect binary vs ternary classification
+        unique_classes = sorted(y_train.unique())
+        is_binary = len(unique_classes) == 2
+        num_classes = len(unique_classes)
+
+        # Set num_class parameter dynamically
+        self.model.set_params(num_class=num_classes)
+
+        # Map labels for XGBoost (requires non-negative integers)
+        if is_binary:
+            label_map = {-1: 0, 1: 1}  # SELL=0, BUY=1
+            self.reverse_map = {0: -1, 1: 1}
+        else:
+            label_map = {-1: 0, 0: 1, 1: 2}  # SELL=0, HOLD=1, BUY=2
+            self.reverse_map = {0: -1, 1: 0, 2: 1}
+        
         y_train_mapped = y_train.map(label_map)
         y_val_mapped = y_val.map(label_map)
-
+        
         print(f"Training on {len(X_train)} samples, validating on {len(X_val)} samples...")
+        print(f"Classification mode: {'BINARY' if is_binary else 'TERNARY'}")
         print(f"Class distribution (train):")
-        print(f"  BUY: {(y_train == Signal.BUY.value).sum()} ({(y_train == Signal.BUY.value).sum() / len(y_train) * 100:.1f}%)")
-        print(f"  HOLD: {(y_train == Signal.HOLD.value).sum()} ({(y_train == Signal.HOLD.value).sum() / len(y_train) * 100:.1f}%)")
-        print(f"  SELL: {(y_train == Signal.SELL.value).sum()} ({(y_train == Signal.SELL.value).sum() / len(y_train) * 100:.1f}%)")
+        if is_binary:
+            print(f"  BUY: {(y_train == Signal.BUY.value).sum()} ({(y_train == Signal.BUY.value).sum() / len(y_train) * 100:.1f}%)")
+            print(f"  SELL: {(y_train == Signal.SELL.value).sum()} ({(y_train == Signal.SELL.value).sum() / len(y_train) * 100:.1f}%)")
+        else:
+            print(f"  BUY: {(y_train == Signal.BUY.value).sum()} ({(y_train == Signal.BUY.value).sum() / len(y_train) * 100:.1f}%)")
+            print(f"  HOLD: {(y_train == Signal.HOLD.value).sum()} ({(y_train == Signal.HOLD.value).sum() / len(y_train) * 100:.1f}%)")
+            print(f"  SELL: {(y_train == Signal.SELL.value).sum()} ({(y_train == Signal.SELL.value).sum() / len(y_train) * 100:.1f}%)")
 
         # Train model with early stopping (XGBoost 3.0+ API)
         self.model.fit(
@@ -128,31 +148,51 @@ class XGBoostStrategy(BaseStrategy):
 
         # Evaluate on training set
         y_train_pred_mapped = self.model.predict(X_train)
-        y_train_pred = pd.Series(y_train_pred_mapped).map({0: -1, 1: 0, 2: 1})
+        # Handle both 1D class predictions and 2D probability arrays
+        if len(y_train_pred_mapped.shape) > 1:
+            y_train_pred_mapped = y_train_pred_mapped.argmax(axis=1)
+        y_train_pred = pd.Series(y_train_pred_mapped).map(self.reverse_map)
         train_acc = accuracy_score(y_train, y_train_pred)
 
         # Evaluate on validation set
         y_val_pred_mapped = self.model.predict(X_val)
-        y_val_pred = pd.Series(y_val_pred_mapped).map({0: -1, 1: 0, 2: 1})
+        if len(y_val_pred_mapped.shape) > 1:
+            y_val_pred_mapped = y_val_pred_mapped.argmax(axis=1)
+        y_val_pred = pd.Series(y_val_pred_mapped).map(self.reverse_map)
         val_acc = accuracy_score(y_val, y_val_pred)
 
         # Detailed validation metrics
         print("\nValidation Set Performance:")
-        print(classification_report(
-            y_val,
-            y_val_pred,
-            target_names=['SELL', 'HOLD', 'BUY'],
-            zero_division=0
-        ))
-
-        # Confusion matrix
-        cm = confusion_matrix(y_val, y_val_pred, labels=[-1, 0, 1])
-        print("\nConfusion Matrix:")
-        print("                Predicted")
-        print("              SELL  HOLD  BUY")
-        print(f"Actual SELL   {cm[0, 0]:4d}  {cm[0, 1]:4d}  {cm[0, 2]:4d}")
-        print(f"       HOLD   {cm[1, 0]:4d}  {cm[1, 1]:4d}  {cm[1, 2]:4d}")
-        print(f"       BUY    {cm[2, 0]:4d}  {cm[2, 1]:4d}  {cm[2, 2]:4d}")
+        if is_binary:
+            print(classification_report(
+                y_val,
+                y_val_pred,
+                target_names=['SELL', 'BUY'],
+                labels=[-1, 1],
+                zero_division=0
+            ))
+            # Binary confusion matrix
+            cm = confusion_matrix(y_val, y_val_pred, labels=[-1, 1])
+            print("\nConfusion Matrix:")
+            print("                Predicted")
+            print("              SELL  BUY")
+            print(f"Actual SELL   {cm[0, 0]:4d}  {cm[0, 1]:4d}")
+            print(f"       BUY    {cm[1, 0]:4d}  {cm[1, 1]:4d}")
+        else:
+            print(classification_report(
+                y_val,
+                y_val_pred,
+                target_names=['SELL', 'HOLD', 'BUY'],
+                zero_division=0
+            ))
+            # Ternary confusion matrix
+            cm = confusion_matrix(y_val, y_val_pred, labels=[-1, 0, 1])
+            print("\nConfusion Matrix:")
+            print("                Predicted")
+            print("              SELL  HOLD  BUY")
+            print(f"Actual SELL   {cm[0, 0]:4d}  {cm[0, 1]:4d}  {cm[0, 2]:4d}")
+            print(f"       HOLD   {cm[1, 0]:4d}  {cm[1, 1]:4d}  {cm[1, 2]:4d}")
+            print(f"       BUY    {cm[2, 0]:4d}  {cm[2, 1]:4d}  {cm[2, 2]:4d}")
 
         # Store metrics
         self.train_metrics = {
@@ -195,9 +235,12 @@ class XGBoostStrategy(BaseStrategy):
         if self.feature_names:
             features = features[self.feature_names]
 
-        # Get predictions (0, 1, 2) and map back to (-1, 0, 1)
+        # Get predictions and map back to original labels
         predictions_mapped = self.model.predict(features)
-        predictions = np.array([{0: -1, 1: 0, 2: 1}[p] for p in predictions_mapped])
+        # Handle both 1D class predictions and 2D probability arrays
+        if len(predictions_mapped.shape) > 1:
+            predictions_mapped = predictions_mapped.argmax(axis=1)
+        predictions = np.array([self.reverse_map[int(p)] for p in predictions_mapped])
         return predictions
 
     def predict_proba(self, features: pd.DataFrame) -> np.ndarray:

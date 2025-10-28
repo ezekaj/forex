@@ -1,0 +1,86 @@
+====================================================================================================
+BINARY CLASSIFICATION TEST - NO HOLD CLASS
+====================================================================================================
+
+CRITICAL CHANGE: Switching from ternary (BUY/HOLD/SELL) to binary (BUY vs SELL)
+REASON: Ternary classification failed (100% HOLD predictions, 0 trades)
+NEW APPROACH: Only trade on strong signals, ignore weak/neutral price action
+====================================================================================================
+
+1. Generating 1 year of EURUSD 1h data...
+   Generated 8760 bars
+
+2. Generating 68 features...
+   Features: 69 columns, 8561 samples
+
+====================================================================================================
+TEST 1: RANDOM FOREST - BINARY CLASSIFICATION
+====================================================================================================
+
+3. Training Random Forest with binary classification (0.5% threshold)...
+
+Label distribution (binary, 0.5% threshold):
+  BUY:  356 (51.6%)
+  SELL: 334 (48.4%)
+  SKIPPED (neutral): 7871 samples (91.9%)
+  Total training samples: 690
+Training on 552 samples, validating on 138 samples...
+Classification mode: BINARY
+Class distribution (train):
+  BUY: 293 (53.1%)
+  SELL: 259 (46.9%)
+
+Validation Set Performance:
+              precision    recall  f1-score   support
+
+        SELL       0.00      0.00      0.00        75
+         BUY       0.46      1.00      0.63        63
+
+    accuracy                           0.46       138
+   macro avg       0.23      0.50      0.31       138
+weighted avg       0.21      0.46      0.29       138
+
+
+Confusion Matrix:
+                Predicted
+              SELL  BUY
+Actual SELL      0    75
+       BUY       0    63
+
+4. Backtesting Random Forest (6 months)...
+
+RANDOM FOREST RESULTS:
+  Return: 1.65% over 6 months
+  Annualized: ~3.30%
+  Trades: 1
+  Win Rate: 100.0%
+  Sharpe Ratio: 1.28
+  Max Drawdown: 0.51%
+
+====================================================================================================
+TEST 2: XGBOOST - BINARY CLASSIFICATION
+====================================================================================================
+
+5. Training XGBoost with binary classification (0.5% threshold)...
+Training on 552 samples, validating on 138 samples...
+Classification mode: BINARY
+Class distribution (train):
+  BUY: 293 (53.1%)
+  SELL: 259 (46.9%)
+Training stopped at iteration 300
+Traceback (most recent call last):
+  File "C:\Users\User\Desktop\forex\test_binary_classification.py", line 105, in <module>
+    xgb_metrics = xgb_strategy.train(features_df, xgb_labels, validation_split=0.2)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\Desktop\forex\forex_system\strategies\xgboost_strategy.py", line 151, in train
+    y_train_pred = pd.Series(y_train_pred_mapped).map(self.reverse_map)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pandas\core\series.py", line 587, in __init__
+    data = sanitize_array(data, index, dtype, copy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pandas\core\construction.py", line 656, in sanitize_array
+    subarr = _sanitize_ndim(subarr, data, dtype, index, allow_2d=allow_2d)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pandas\core\construction.py", line 715, in _sanitize_ndim
+    raise ValueError(
+ValueError: Data must be 1-dimensional, got ndarray of shape (552, 2) instead
