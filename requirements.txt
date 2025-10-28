@@ -64,4 +64,4 @@ pylint==3.0.3
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
-requests==2.31.0
+requests==2.31.0yfinance==0.2.48
