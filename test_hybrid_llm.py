@@ -42,7 +42,7 @@ def print_comparison(baseline_metrics: dict, hybrid_metrics: dict, hybrid_stats:
     """Print side-by-side comparison."""
     print_section("PERFORMANCE COMPARISON: Baseline vs Hybrid")
 
-    print("\n📊 WIN RATE (Most Important)")
+    print("\n[WIN RATE] (Most Important)")
     print(f"{'Metric':<30} {'Baseline':>15} {'Hybrid':>15} {'Improvement':>15}")
     print('-' * 80)
 
@@ -53,10 +53,10 @@ def print_comparison(baseline_metrics: dict, hybrid_metrics: dict, hybrid_stats:
     print(f"{'Win Rate':<30} {baseline_wr:>14.1%} {hybrid_wr:>14.1%} {wr_improvement:>+14.1%}")
     print(f"{'Break-Even Threshold':<30} {'58.0%':>15} {'58.0%':>15} {'(target)':>15}")
 
-    status = "✅ SUCCESS" if hybrid_wr >= 0.58 else "❌ FAILED"
-    print(f"\n{status}: Hybrid win rate = {hybrid_wr:.1%}")
+    status = "[SUCCESS]" if hybrid_wr >= 0.58 else "[FAILED]"
+    print(f"\n{status.replace('✅', '[SUCCESS]').replace('❌', '[FAILED]')}: Hybrid win rate = {hybrid_wr:.1%}")
 
-    print("\n💰 RETURNS")
+    print("\n[RETURNS]")
     print(f"{'Metric':<30} {'Baseline':>15} {'Hybrid':>15} {'Improvement':>15}")
     print('-' * 80)
 
@@ -72,7 +72,7 @@ def print_comparison(baseline_metrics: dict, hybrid_metrics: dict, hybrid_stats:
           f"{hybrid_metrics['max_drawdown']:>14.2%} "
           f"{hybrid_metrics['max_drawdown'] - baseline_metrics['max_drawdown']:>+14.2%}")
 
-    print("\n📈 TRADING ACTIVITY")
+    print("\n[TRADING ACTIVITY]")
     print(f"{'Metric':<30} {'Baseline':>15} {'Hybrid':>15} {'Difference':>15}")
     print('-' * 80)
 
@@ -88,7 +88,7 @@ def print_comparison(baseline_metrics: dict, hybrid_metrics: dict, hybrid_stats:
           f"{hybrid_metrics['losing_trades']:>15.0f} "
           f"{int(hybrid_metrics['losing_trades'] - baseline_metrics['losing_trades']):>+15.0f}")
 
-    print("\n🤖 LLM REVIEW STATISTICS")
+    print("\n[LLM REVIEW STATISTICS]")
     print(f"{'Metric':<30} {'Value':>15}")
     print('-' * 80)
 
@@ -112,7 +112,7 @@ def print_comparison(baseline_metrics: dict, hybrid_metrics: dict, hybrid_stats:
 
         roi = (profit_improvement - hybrid_stats['avg_cost_per_signal']) / hybrid_stats['avg_cost_per_signal'] * 100
 
-        print(f"\n💎 COST-BENEFIT ANALYSIS")
+        print(f"\n[COST-BENEFIT ANALYSIS]")
         print(f"{'Metric':<30} {'Value':>15}")
         print('-' * 80)
         print(f"{'Profit/Trade (Baseline)':<30} ${profit_per_trade_baseline * 10000:>14.2f}")
@@ -139,7 +139,7 @@ def run_test():
     end_date = datetime(2024, 12, 31)
     initial_capital = 10000
 
-    print("\n⚠️  NOTE: This test requires API keys to be set in .env file")
+    print("\n[!] NOTE: This test requires API keys to be set in .env file")
     print("   - JINA_API_KEY for news sentiment")
     print("   - ANTHROPIC_API_KEY or OPENAI_API_KEY for LLM review")
     print("\n   Without API keys, the test will use mock data (for demonstration)")
@@ -148,13 +148,13 @@ def run_test():
     print_section("STEP 1: Load Historical Data")
     data_service = DataService()
     df = data_service.get_historical_data(pair, timeframe, start_date, end_date)
-    print(f"✓ Loaded {len(df)} bars from {df['timestamp'].min()} to {df['timestamp'].max()}")
+    print(f"[OK] Loaded {len(df)} bars from {df['timestamp'].min()} to {df['timestamp'].max()}")
 
     # Step 2: Generate features
     print_section("STEP 2: Generate Technical Features")
     feature_engineer = FeatureEngineer()
     features_df = feature_engineer.generate_features(df)
-    print(f"✓ Generated {len(features_df.columns)} technical indicators")
+    print(f"[OK] Generated {len(features_df.columns)} technical indicators")
     print(f"  Sample features: {', '.join(features_df.columns[:10].tolist())}...")
 
     # Step 3: Generate labels
@@ -175,7 +175,7 @@ def run_test():
 
     buy_count = (labels_clean == 1).sum()
     sell_count = (labels_clean == -1).sum()
-    print(f"✓ Generated {len(labels_clean)} labels")
+    print(f"[OK] Generated {len(labels_clean)} labels")
     print(f"  BUY: {buy_count} ({buy_count/len(labels_clean):.1%})")
     print(f"  SELL: {sell_count} ({sell_count/len(labels_clean):.1%})")
 
@@ -207,9 +207,9 @@ def run_test():
         enable_llm = True
         provider = 'anthropic' if anthropic_key else 'openai'
         llm_service = LLMService(provider=provider)
-        print(f"✓ LLM service initialized ({provider})")
+        print(f"[OK] LLM service initialized ({provider})")
     else:
-        print("⚠️  No LLM API keys found - LLM review will be DISABLED")
+        print("[!] No LLM API keys found - LLM review will be DISABLED")
         print("   Hybrid will only add news sentiment features (no LLM review)")
 
     hybrid_strategy = HybridLLMStrategy(
@@ -222,9 +222,9 @@ def run_test():
         pair=pair
     )
 
-    print("⏳ Training hybrid strategy (may take a while due to news API calls)...")
+    print("[...] Training hybrid strategy (may take a while due to news API calls)...")
     hybrid_metrics_train = hybrid_strategy.train(features_clean, labels_clean)
-    print(f"✓ Training complete")
+    print(f"[OK] Training complete")
     print(f"  Train accuracy: {hybrid_metrics_train['train_accuracy']:.3f}")
     print(f"  Val accuracy: {hybrid_metrics_train['val_accuracy']:.3f}")
     print(f"  Val win rate: {hybrid_metrics_train['val_win_rate']:.3f}")
@@ -238,12 +238,12 @@ def run_test():
         slippage_pips=0.5
     )
 
-    print("⏳ Running backtest...")
+    print("[...] Running backtest...")
     baseline_trades, baseline_equity = baseline_backtest.run(features_clean, df[valid_mask])
     baseline_metrics_backtest = BacktestMetrics(baseline_trades, baseline_equity, initial_capital)
     baseline_summary = baseline_metrics_backtest.get_summary()
 
-    print(f"✓ Backtest complete")
+    print(f"[OK] Backtest complete")
     print(f"  Total Return: {baseline_summary['total_return']:.2%}")
     print(f"  Win Rate: {baseline_summary['win_rate']:.1%}")
     print(f"  Total Trades: {baseline_summary['total_trades']}")
@@ -257,12 +257,12 @@ def run_test():
         slippage_pips=0.5
     )
 
-    print("⏳ Running backtest (LLM review active - this will take time)...")
+    print("[...] Running backtest (LLM review active - this will take time)...")
     hybrid_trades, hybrid_equity = hybrid_backtest.run(features_clean, df[valid_mask])
     hybrid_metrics_backtest = BacktestMetrics(hybrid_trades, hybrid_equity, initial_capital)
     hybrid_summary = hybrid_metrics_backtest.get_summary()
 
-    print(f"✓ Backtest complete")
+    print(f"[OK] Backtest complete")
     print(f"  Total Return: {hybrid_summary['total_return']:.2%}")
     print(f"  Win Rate: {hybrid_summary['win_rate']:.1%}")
     print(f"  Total Trades: {hybrid_summary['total_trades']}")
@@ -280,11 +280,11 @@ def run_test():
     hybrid_return = hybrid_summary['total_return']
     baseline_return = baseline_summary['total_return']
 
-    print(f"\n🎯 TARGET: 58% win rate to break even after transaction costs")
-    print(f"📊 RESULT: {hybrid_wr:.1%} win rate achieved")
+    print(f"\n[TARGET] 58% win rate to break even after transaction costs")
+    print(f"[RESULT] {hybrid_wr:.1%} win rate achieved")
 
     if hybrid_wr >= 0.58 and hybrid_return > baseline_return:
-        print(f"\n✅ GO: Hybrid system shows promise!")
+        print(f"\n[GO] Hybrid system shows promise!")
         print(f"   - Win rate above break-even threshold ({hybrid_wr:.1%} >= 58%)")
         print(f"   - Outperforms baseline ({hybrid_return:.2%} vs {baseline_return:.2%})")
         print(f"   - LLM costs justified by improved performance")
@@ -295,7 +295,7 @@ def run_test():
         print(f"   4. Test on 4h timeframe (less noise)")
 
     elif hybrid_wr >= 0.58 and hybrid_return <= baseline_return:
-        print(f"\n⚠️  MAYBE: Win rate good but returns poor")
+        print(f"\n[MAYBE] Win rate good but returns poor")
         print(f"   - Win rate above break-even ({hybrid_wr:.1%} >= 58%)")
         print(f"   - But returns not better than baseline ({hybrid_return:.2%} vs {baseline_return:.2%})")
         print(f"   - LLM is filtering bad trades but may be too conservative")
@@ -305,7 +305,7 @@ def run_test():
         print(f"   3. Retrain with different features")
 
     elif hybrid_wr < 0.58 and hybrid_return > baseline_return:
-        print(f"\n⚠️  MIXED: Returns improved but win rate below target")
+        print(f"\n[MIXED] Returns improved but win rate below target")
         print(f"   - Win rate below break-even ({hybrid_wr:.1%} < 58%)")
         print(f"   - But returns better than baseline ({hybrid_return:.2%} vs {baseline_return:.2%})")
         print(f"   - May work if risk/reward is good (bigger wins, smaller losses)")
@@ -315,7 +315,7 @@ def run_test():
         print(f"   3. Test on longer timeframes (4h, daily)")
 
     else:
-        print(f"\n❌ NO-GO: Hybrid system failed to improve performance")
+        print(f"\n[NO-GO] Hybrid system failed to improve performance")
         print(f"   - Win rate below break-even ({hybrid_wr:.1%} < 58%)")
         print(f"   - Returns not better than baseline ({hybrid_return:.2%} vs {baseline_return:.2%})")
         print(f"   - LLM costs not justified")
@@ -329,7 +329,7 @@ def run_test():
     if enable_llm:
         log_path = project_root / 'hybrid_review_log.json'
         hybrid_strategy.save_review_log(str(log_path))
-        print(f"\n📝 LLM review log saved to: {log_path}")
+        print(f"\n[LOG] LLM review log saved to: {log_path}")
 
     print("\n" + "=" * 80)
     print("Test complete!")
@@ -340,8 +340,8 @@ if __name__ == '__main__':
     try:
         run_test()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Test interrupted by user")
+        print("\n\n[!] Test interrupted by user")
     except Exception as e:
-        print(f"\n\n❌ Test failed with error: {str(e)}")
+        print(f"\n\n[ERROR] Test failed with error: {str(e)}")
         import traceback
         traceback.print_exc()

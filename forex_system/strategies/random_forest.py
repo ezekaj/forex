@@ -90,8 +90,19 @@ class RandomForestStrategy(BaseStrategy):
 
         # Time series split (last portion for validation)
         split_idx = int(len(X) * (1 - validation_split))
-        X_train, X_val = X.iloc[:split_idx], X.iloc[split_idx:]
-        y_train, y_val = y.iloc[:split_idx], y.iloc[split_idx:]
+        X_train, X_val = X.iloc[:split_idx].copy(), X.iloc[split_idx:].copy()
+        y_train, y_val = y.iloc[:split_idx].copy(), y.iloc[split_idx:].copy()
+
+        # Drop any remaining NaN rows in validation set
+        val_nan_mask = ~X_val.isna().any(axis=1)
+        X_val = X_val.loc[val_nan_mask]
+        y_val = y_val.loc[X_val.index]
+
+        # Ensure indices match
+        X_train = X_train.reset_index(drop=True)
+        X_val = X_val.reset_index(drop=True)
+        y_train = y_train.reset_index(drop=True)
+        y_val = y_val.reset_index(drop=True)
 
         # Detect binary vs ternary classification
         unique_classes = sorted(y_train.unique())

@@ -64,4 +64,9 @@ pylint==3.0.3
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
-requests==2.31.0yfinance==0.2.48
+requests==2.31.0
+yfinance==0.2.48
+
+# LLM APIs (for Hybrid ML+LLM Strategy)
+anthropic>=0.25.0
+openai>=1.0.0
