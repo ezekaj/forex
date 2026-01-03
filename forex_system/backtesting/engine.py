@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ..strategies.base import BaseStrategy, Signal
+from ..risk import RiskProfile
 
 
 @dataclass
@@ -85,7 +86,8 @@ class BacktestEngine:
         strategy: BaseStrategy,
         data: pd.DataFrame,
         features: pd.DataFrame,
-        verbose: bool = True
+        verbose: bool = True,
+        risk_profile: Optional[RiskProfile] = None
     ) -> Dict[str, Any]:
         """
         Run backtest on historical data.
@@ -111,6 +113,13 @@ class BacktestEngine:
         self.trades = []
         self.equity_curve = [self.initial_capital]
         self.timestamps = []
+        self.risk_profile = risk_profile
+        self.halted_reason = None
+        self.peak_equity = self.initial_capital
+        self.day_start_equity = self.initial_capital
+        self.week_start_equity = self.initial_capital
+        self.current_day_key = None
+        self.current_week_key = None
 
         if verbose:
             print(f"Starting backtest with ${self.initial_capital:,.2f}")
@@ -124,6 +133,11 @@ class BacktestEngine:
 
         # Simulate trading bar by bar
         for i in range(len(data)):
+            if self.halted_reason:
+                if verbose:
+                    print(f"Risk halt triggered: {self.halted_reason}")
+                break
+
             timestamp = data.index[i] if hasattr(data.index[i], 'to_pydatetime') else i
             close_price = data.iloc[i]['close']
             signal = predictions[i]
@@ -135,6 +149,9 @@ class BacktestEngine:
             current_equity = self._calculate_equity(close_price)
             self.equity_curve.append(current_equity)
             self.timestamps.append(timestamp)
+
+            # Risk monitoring and circuit breakers
+            self._update_risk_limits(timestamp, current_equity)
 
             if verbose and (i + 1) % 1000 == 0:
                 print(f"Processed {i + 1}/{len(data)} bars, Equity: ${current_equity:,.2f}")
@@ -170,6 +187,9 @@ class BacktestEngine:
 
     def _process_signal(self, signal: int, price: float, timestamp) -> None:
         """Process trading signal and manage positions."""
+        if self.halted_reason:
+            return
+
         if self.position is None:
             # No position - open new position if signal is BUY or SELL
             if signal == Signal.BUY.value:
@@ -190,8 +210,22 @@ class BacktestEngine:
 
     def _open_position(self, price: float, timestamp, direction: int) -> None:
         """Open a new position."""
+        if self.halted_reason:
+            return
+
         # Calculate position size
-        position_value = self.capital * self.position_size_pct
+        position_pct = self.position_size_pct
+        if self.risk_profile:
+            position_pct = min(
+                position_pct,
+                self.risk_profile.max_position_pct,
+                max(self.risk_profile.risk_per_trade_pct, 0.0001)
+            )
+
+        if position_pct <= 0:
+            return
+
+        position_value = self.capital * position_pct
         size = position_value / price
 
         # Apply spread and slippage
@@ -275,3 +309,46 @@ class BacktestEngine:
         unrealized_pl = current_value * self.position.direction * self.position.size
 
         return self.capital + unrealized_pl
+
+    def _update_risk_limits(self, timestamp, equity: float) -> None:
+        """Enforce drawdown and period loss limits."""
+        if not self.risk_profile:
+            return
+
+        # Track peak for drawdown
+        if equity > self.peak_equity:
+            self.peak_equity = equity
+
+        drawdown_pct = (self.peak_equity - equity) / self.peak_equity if self.peak_equity > 0 else 0.0
+        if drawdown_pct >= self.risk_profile.max_drawdown_pct:
+            self.halted_reason = (
+                f"Max drawdown reached: {drawdown_pct*100:.2f}% >= {self.risk_profile.max_drawdown_pct*100:.2f}%"
+            )
+            return
+
+        # Period loss checks only if timestamps are datetime
+        if isinstance(timestamp, datetime):
+            day_key = timestamp.date()
+            week_key = (timestamp.isocalendar().year, timestamp.isocalendar().week)
+
+            if self.current_day_key != day_key:
+                self.current_day_key = day_key
+                self.day_start_equity = equity
+
+            if self.current_week_key != week_key:
+                self.current_week_key = week_key
+                self.week_start_equity = equity
+
+            daily_loss_pct = (self.day_start_equity - equity) / self.day_start_equity if self.day_start_equity > 0 else 0.0
+            weekly_loss_pct = (self.week_start_equity - equity) / self.week_start_equity if self.week_start_equity > 0 else 0.0
+
+            if daily_loss_pct >= self.risk_profile.max_daily_loss_pct:
+                self.halted_reason = (
+                    f"Daily loss limit hit: {daily_loss_pct*100:.2f}% >= {self.risk_profile.max_daily_loss_pct*100:.2f}%"
+                )
+                return
+
+            if weekly_loss_pct >= self.risk_profile.max_weekly_loss_pct:
+                self.halted_reason = (
+                    f"Weekly loss limit hit: {weekly_loss_pct*100:.2f}% >= {self.risk_profile.max_weekly_loss_pct*100:.2f}%"
+                )
