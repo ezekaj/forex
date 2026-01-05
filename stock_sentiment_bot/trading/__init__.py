@@ -2,6 +2,7 @@
 from trading.risk_manager import RiskManager, init_risk_manager, get_risk_manager
 from trading.position_sizer import PositionSizer, PositionSize
 from trading.signal_generator import SignalGenerator, TradingSignal
+from trading.paper_trader import PaperTrader, PaperPosition, PaperOrder
 
 __all__ = [
     "RiskManager",
@@ -11,4 +12,7 @@ __all__ = [
     "PositionSize",
     "SignalGenerator",
     "TradingSignal",
+    "PaperTrader",
+    "PaperPosition",
+    "PaperOrder",
 ]

@@ -4,8 +4,11 @@
 # Core
 python-dotenv>=1.0.0
 
-# Alpaca API (trading + market data)
-alpaca-py>=0.21.0
+# Yahoo Finance (no API key needed!)
+yfinance>=0.2.30
+
+# Alpaca API (optional - for live trading later)
+# alpaca-py>=0.21.0
 
 # Reddit scraping
 praw>=7.7.0
