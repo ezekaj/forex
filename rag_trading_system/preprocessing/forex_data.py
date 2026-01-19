@@ -261,8 +261,9 @@ class ForexDataFetcher:
         if df.empty:
             return None
 
-        # Convert timestamp to datetime index
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        # Convert timestamp to datetime index (remove timezone info for consistency)
+        df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+        df['timestamp'] = df['timestamp'].dt.tz_localize(None)  # Remove timezone
         df.set_index('timestamp', inplace=True)
 
         return df
