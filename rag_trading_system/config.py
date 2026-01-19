@@ -79,12 +79,13 @@ EMBEDDING_BATCH_SIZE = 100
 # SIMULATION SETTINGS
 # =============================================================================
 
-# Simulation date range
-SIM_START_DATE = "2025-01-01"
-SIM_END_DATE = "2026-01-01"
+# Simulation date range (must be within historical data: 2024-01-01 to 2026-01-16)
+SIM_START_DATE = "2024-06-01"  # Start 6 months in to allow indicator warmup
+SIM_END_DATE = "2025-06-01"    # 1 year simulation period
 
 # How often to make decisions (in hours)
-DECISION_INTERVAL_HOURS = 4
+# Use 24 for daily data, 4 for 4H data
+DECISION_INTERVAL_HOURS = 24
 
 # Starting capital for simulation
 SIM_STARTING_CAPITAL = 30000

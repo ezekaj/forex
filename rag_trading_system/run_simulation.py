@@ -191,6 +191,7 @@ def run_simulation(
     from ensemble.trading_agent import TradingAgent
     from analysis.chart_generator import ChartGenerator, generate_sample_data
     from analysis.indicators import calculate_all_indicators
+    from preprocessing.forex_data import ForexDataFetcher
 
     print("\n" + "="*60)
     print("   RAG TRADING SYSTEM - SIMULATION")
@@ -211,6 +212,17 @@ def run_simulation(
 
     agent = TradingAgent()
     chart_gen = ChartGenerator()
+    data_fetcher = ForexDataFetcher()
+
+    # Check if we have real data
+    data_stats = data_fetcher.get_stats()
+    use_real_data = len(data_stats) > 0
+    if use_real_data:
+        print(f"\nUsing REAL historical data from database")
+        for pair, info in data_stats.items():
+            print(f"  {pair}: {info['count']} bars")
+    else:
+        print(f"\nUsing SYNTHETIC data (no historical data in database)")
 
     print(f"\nSimulation: {start_date} → {end_date}")
     print(f"Capital: ${capital:,.2f}")
@@ -231,8 +243,13 @@ def run_simulation(
         # Process each pair
         for pair in pairs:
             try:
-                # Generate sample price data (replace with real data in production)
-                df = generate_sample_data(pair, 200, end_date=engine.time_machine.now)
+                # Get price data - prefer real data, fallback to synthetic
+                if use_real_data and pair in data_stats:
+                    df = data_fetcher.get_prices(pair, timeframe="1D")
+                    if df is None or len(df) < 50:
+                        df = generate_sample_data(pair, 200, end_date=engine.time_machine.now)
+                else:
+                    df = generate_sample_data(pair, 200, end_date=engine.time_machine.now)
 
                 # Filter to only past data
                 df_past = engine.time_machine.filter_data_by_time(df)
