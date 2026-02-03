@@ -162,8 +162,35 @@ LOG_FILE = BASE_DIR / "trading.log"
 
 # How much each model's vote counts
 ENSEMBLE_WEIGHTS = {
-    "main_reasoning": 0.35,
-    "chart_vision": 0.25,
-    "pattern_detector": 0.20,
-    "sentiment_analyzer": 0.20,
+    "main_reasoning": 0.30,
+    "chart_vision": 0.20,
+    "pattern_detector": 0.15,
+    "sentiment_analyzer": 0.15,
+    "fundamental_analysis": 0.20,  # NEW: Dexter-style fundamental analysis
 }
+
+# =============================================================================
+# FUNDAMENTAL ANALYSIS (Dexter Integration)
+# =============================================================================
+
+# API key for financialdatasets.ai
+FINANCIAL_DATASETS_API_KEY = os.getenv("FINANCIAL_DATASETS_API_KEY", "")
+
+# Enable fundamental analysis for stocks (requires API key)
+ENABLE_FUNDAMENTAL_ANALYSIS = True
+
+# Fundamental signal weight in ensemble (0-1)
+FUNDAMENTAL_WEIGHT = 0.20
+
+# Which asset types to analyze fundamentally
+FUNDAMENTAL_ASSET_TYPES = ["stock", "etf", "crypto"]  # Not forex
+
+# Stock tickers to trade (in addition to forex pairs)
+STOCK_TICKERS = [
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA",  # Tech giants
+    "META", "TSLA", "JPM", "V", "UNH",         # Mixed sectors
+    "SPY", "QQQ",                               # ETFs
+]
+
+# Fundamental analysis refresh interval (hours)
+FUNDAMENTAL_REFRESH_HOURS = 4  # Don't fetch too often
