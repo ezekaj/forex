@@ -184,6 +184,9 @@ model_cache/
 # ============================================================================
 # State files (should never be in git)
 *.json
+!package.json
+!package-lock.json
+!tsconfig.json
 state/
 evolution_state.json
 trade_history.json
