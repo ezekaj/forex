@@ -1,13 +1,22 @@
 """
 Database models for the Forex Trading System.
 All models use SQLAlchemy ORM for PostgreSQL.
-"""
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from typing import Optional
 
-Base = declarative_base()
+Note: SQLAlchemy imports are guarded so the agent system
+(which uses llm_client.py and sentiment.py in this package)
+can work without SQLAlchemy installed.
+"""
+try:
+    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker, scoped_session
+    _HAS_SQLALCHEMY = True
+    Base = declarative_base()
+except ImportError:
+    _HAS_SQLALCHEMY = False
+    Base = None
+
+from typing import Optional
 
 # Global session factory (initialized at startup)
 _engine = None
@@ -66,25 +75,19 @@ def drop_all_tables() -> None:
     Base.metadata.drop_all(bind=_engine)
 
 
-# Import all models to register them with Base
-from .trade import Trade
-from .opportunity import Opportunity
-from .position import Position
-from .account import AccountHistory, PerformanceMetrics
-from .configuration import Configuration
-from .log_event import LogEvent
+# Import ORM models only if SQLAlchemy is available
+if _HAS_SQLALCHEMY:
+    from .trade import Trade
+    from .opportunity import Opportunity
+    from .position import Position
+    from .account import AccountHistory, PerformanceMetrics
+    from .configuration import Configuration
+    from .log_event import LogEvent
 
-__all__ = [
-    'Base',
-    'init_db',
-    'get_session',
-    'create_all_tables',
-    'drop_all_tables',
-    'Trade',
-    'Opportunity',
-    'Position',
-    'AccountHistory',
-    'PerformanceMetrics',
-    'Configuration',
-    'LogEvent',
-]
+    __all__ = [
+        'Base', 'init_db', 'get_session', 'create_all_tables', 'drop_all_tables',
+        'Trade', 'Opportunity', 'Position', 'AccountHistory', 'PerformanceMetrics',
+        'Configuration', 'LogEvent',
+    ]
+else:
+    __all__ = []
