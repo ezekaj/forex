@@ -153,6 +153,76 @@ Data:
 
 ---
 
+### NautilusTrader Analysis (2026-03-19)
+
+**Verdict: Don't switch frameworks. Extract useful patterns.**
+
+NautilusTrader (21K stars, Rust core, 8 years old) is built for event-driven, high-frequency, per-instrument strategies. Our batch ranking of 46 stocks every 21 days is a completely different paradigm. Also: no Alpaca support (dealbreaker), still in Beta, single maintainer (95% of commits).
+
+**What we extracted and tested:**
+
+| Technique | Impact on our system |
+|-----------|---------------------|
+| **EfficiencyRatio (Kaufman)** | Sharpe 1.01 → 1.38 in isolation test, 1.18 in production combo |
+| **KeltnerPosition** | Sharpe 1.01 → 1.37 in isolation test |
+| **Pressure indicator** | No improvement alone, slight help in combos |
+| VolumeSensitiveFillModel | Not backtested yet — for realistic fill simulation |
+| TWAP execution | Not implemented yet — for live order splitting |
+| SlidingWindowThrottler | Not needed yet — for Alpaca rate limiting |
+| 3-state CircuitBreaker | Built, not deployed — ACTIVE/REDUCING/HALTED |
+| FuzzyCandlesticks | Built — for LLM chart analysis token compression |
+| SpreadAnalyzer | Built — filter stocks with wide spreads |
+
+**Current best backtest result:**
+```
++146.1%, Sharpe 1.18, Max DD 16.9%, $10K → $24,614
+Components: vol-adjusted momentum + sector caps + hold buffer + vol scaling(20%) + market state filter + EfficiencyRatio filter
+```
+
+### Qwen Article Processing (2026-03-17 to 2026-03-19)
+
+- Processing ALL 4,082,690 articles through Qwen3.5-35B via vLLM
+- 4 parallel chunks, 16 workers each, ~19 articles/sec combined
+- Output: `qwen_chunk_{1-4}.db` in SQLite (not JSON — faster queries, resumable)
+- Fixed prompt after first attempt (old: 66% BULLISH everything; new: balanced sentiment, calibrated importance)
+- Status: 95.5% complete, ~3 hours remaining
+
+**Prompt that works (completions API with JSON prefilling):**
+```
+System: You classify news articles for market impact analysis...
+User: {headline}
+Assistant: {"sentiment":"   ← prefill forces JSON output, bypasses thinking chain
+```
+
+### Research Findings Applied (2026-03-18)
+
+**From academic papers:**
+- Barroso & Santa-Clara 2015 (vol scaling): +20% return, -30% drawdown → APPLIED
+- Cooper et al. 2004 (market state filter): eliminates crash scenarios → APPLIED
+- George & Hwang 2004 (52-week high): tested, didn't improve Sharpe in our data → REJECTED
+
+**From NautilusTrader:**
+- EfficiencyRatio: filters noisy stocks → APPLIED (+3% return improvement)
+- KeltnerPosition: alternative ranking → available but not in production (would need more testing)
+
+**From 2024-2026 research:**
+- AlphaAgent (KDD 2025): LLM generates alpha factors → PLANNED for Phase 6
+- Alpha decay 5.6%/year → need continuous discovery pipeline → PLANNED
+- MarketSenseAI: LLM stock selection → PLANNED after Qwen processing completes
+- Forex ML Sharpe 2.84-3.91 → use SSD forex data as context features → PLANNED
+
+### Storage Decision: SQLite vs JSON
+
+SQLite chosen over JSON for 4M article analysis storage because:
+- Fast queries: `WHERE ticker='NVDA' AND importance >= 8` → instant
+- Resumable: `INSERT OR IGNORE` → restart anytime
+- 4 parallel writers → separate DBs, zero conflict
+- Aggregation: `GROUP BY date, ticker` in SQL → no memory issues
+- **Format has ZERO impact on model results** — same data either way
+- Can export to JSON/JSONL anytime if needed for portability
+
+---
+
 ## Rules for Future Sessions
 
 1. **Read this file first** — don't repeat experiments that already failed
