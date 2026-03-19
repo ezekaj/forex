@@ -463,6 +463,16 @@ class MomentumPortfolio:
 
                 # Vol-adjusted momentum score
                 score = ret / vol
+
+                # EfficiencyRatio filter (Kaufman) — from NautilusTrader
+                # Penalize noisy/choppy stocks that whipsaw momentum
+                # ER < 0.15 = pure noise, ER > 0.5 = clean trend
+                daily_changes = close.diff().abs().iloc[-(LOOKBACK + SKIP_RECENT):]
+                net_change = abs(close.iloc[-SKIP_RECENT] - close.iloc[-(LOOKBACK + SKIP_RECENT)])
+                er = net_change / (daily_changes.sum() + 1e-10)
+                if er < 0.15:
+                    score *= 0.3  # heavy penalty for noisy stocks
+
                 if score > 0:
                     scores[sym] = score
 
